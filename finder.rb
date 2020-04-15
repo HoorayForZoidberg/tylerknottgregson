@@ -29,10 +29,10 @@ success = 0
 # for each index
 indices.each do |i|
   # collect 200 words before
-  snippet = text[i - 200..i]
+  snippet = text[i - 300..i]
   # check if the passage contains all words in the proper order
   if check_snippet(snippet, target_sentence_array)
-    puts "\nall words found in following: \n  #{text[i - 200..i].join(' ')}"
+    puts "\nall words found in following: \n  #{text[i - 300..i].join(' ')}"
     success += 1
   end
 end
