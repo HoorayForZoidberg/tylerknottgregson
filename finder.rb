@@ -1,39 +1,64 @@
 # frozen_string_literal: true
 
 def check_snippet(snippet, target_sentence_array)
-  index = snippet.find_index { |word| word.include?(target_sentence_array.first) }
+  # order words last to first (because snippets are found using the last word)
+  # memoize the index marking the last word (start with snippet length)
+  upper_boundary = snippet.length
 
-  return false if index.nil?
-
-  return true unless target_sentence_array.length > 1
-
-  new_target_sentence_array = target_sentence_array[1..-1]
-  check_snippet(snippet[index + 1..-1], new_target_sentence_array)
+  count = 0
+  # for each word, find the highest matching index of occurence that is strictly
+  # lower than the memoized value, replace it with *** word ***, and keep count
+  target_sentence_array.reverse.each do |word|
+    matches = snippet[0...upper_boundary].each_index.select { |i| snippet[i].include?(word) }
+    unless matches.empty?
+      snippet[matches.last] = "#{snippet[matches.last].upcase}"
+      upper_boundary = matches.last
+      count += 1
+    end
+  end
+  # compare count to target_sentence_array count
+  # if they match, return the snippet_arr.join
+  # else, return nil
+  count == target_sentence_array.length ? snippet.join(' ') : nil
 end
 
-puts "What sentence are you looking to build?\n"
-desired_sentence = gets.chomp!.downcase
-target_sentence_array = desired_sentence.split(' ')
+puts "Type all your sentences, then type \"go\"\n"
+sentences = []
+answer = gets.chomp!.downcase
+while answer != "go"
+  sentences << answer
+  answer = gets.chomp!.downcase
+end
 
 # get text, remove punctation
-text = File.read('greatexpectations.txt').gsub(/([^\s\w’])|(’\w)/, '').downcase.split(' ')
-
-# start search using last word (less likely to be common)
-search_word = target_sentence_array.last
-
-# find index of each occurence of last word
-indices = text.each_index.select { |i| text[i].include?(search_word) }
+text = File.read('greatexpectations.txt')
+            .gsub(/([^\s\w’-])/, '')
+            .gsub(/\-/, ' ')
+            .downcase
+            .split(' ')
 
 success = 0
 
-# for each index
-indices.each do |i|
-  # collect 200 words before
-  snippet = text[i - 300..i]
-  # check if the passage contains all words in the proper order
-  if check_snippet(snippet, target_sentence_array)
-    puts "\nall words found in following: \n  #{text[i - 300..i].join(' ')}"
-    success += 1
+sentences.each do |target_sentence|
+  # turn sentence into array
+  target_sentence_array = target_sentence.split(' ')
+
+  # start search using last word (less likely to be common)
+  search_word = target_sentence_array.last
+
+  # find index of each occurence of last word
+  indices = text.each_index.select { |i| text[i].include?(search_word) }
+
+  # for each last word
+  indices.each do |i|
+    # collect 300 words before
+    snippet = text[i - 300..i]
+    # check if the passage contains all words in the proper order
+    checked_snippet = check_snippet(snippet, target_sentence_array)
+    unless checked_snippet.nil?
+      puts "\nall words found for #{target_sentence}: \n  #{checked_snippet}"
+      success += 1
+    end
   end
 end
 
